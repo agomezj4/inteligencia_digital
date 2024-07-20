@@ -79,72 +79,128 @@ class Utils:
         return parameters
 
     @staticmethod
-    def _load_data_common(file_path: str, read_func_pd, read_func_pl):
+    def load_csv_pd(file_path: str) -> pd.DataFrame:
         """
-        Lógica común para cargar datos desde un archivo usando Pandas o Polars.
+        Cargar datos desde un archivo CSV usando Pandas.
 
         Parameters
         ----------
         file_path : str
-            Ruta del archivo a cargar. Puede ser .csv, .parquet, .xlsx o .xls.
-        read_func_pd : function
-            Función de lectura para Pandas.
-        read_func_pl : function
-            Función de lectura para Polars.
+            Ruta del archivo CSV a cargar.
 
         Returns
         -------
-        DataFrame o DataFrame
+        pd.DataFrame
             DataFrame con los datos cargados.
         """
-        if file_path.endswith('.csv'):
-            return read_func_pd(file_path) if read_func_pd else read_func_pl(file_path)
-        elif file_path.endswith('.parquet'):
-            return read_func_pd(file_path) if read_func_pd else read_func_pl(file_path)
-        elif file_path.endswith('.xlsx') or file_path.endswith('.xls'):
-            return read_func_pd(file_path) if read_func_pd else read_func_pl(file_path)
-        else:
-            raise ValueError("Formato de archivo no soportado. Use .csv, .parquet, o .xlsx")
+        return pd.read_csv(file_path)
 
     @staticmethod
-    def _save_data_common(data, path: str, write_func_pd, write_func_pl):
+    def load_csv_pl(file_path: str) -> pl.DataFrame:
         """
-        Lógica común para guardar un DataFrame en un archivo usando Pandas o Polars.
+        Cargar datos desde un archivo CSV usando Polars.
 
         Parameters
         ----------
-        data : DataFrame o DataFrame
+        file_path : str
+            Ruta del archivo CSV a cargar.
+
+        Returns
+        -------
+        pl.DataFrame
+            DataFrame con los datos cargados.
+        """
+        return pl.read_csv(file_path)
+
+    @staticmethod
+    def load_parquet_pd(file_path: str) -> pd.DataFrame:
+        """
+        Cargar datos desde un archivo Parquet usando Pandas.
+
+        Parameters
+        ----------
+        file_path : str
+            Ruta del archivo Parquet a cargar.
+
+        Returns
+        -------
+        pd.DataFrame
+            DataFrame con los datos cargados.
+        """
+        return pd.read_parquet(file_path)
+
+    @staticmethod
+    def load_parquet_pl(file_path: str) -> pl.DataFrame:
+        """
+        Cargar datos desde un archivo Parquet usando Polars.
+
+        Parameters
+        ----------
+        file_path : str
+            Ruta del archivo Parquet a cargar.
+
+        Returns
+        -------
+        pl.DataFrame
+            DataFrame con los datos cargados.
+        """
+        return pl.read_parquet(file_path)
+
+    @staticmethod
+    def save_csv_pd(data: pd.DataFrame, path: str) -> None:
+        """
+        Guardar un DataFrame en un archivo CSV usando Pandas.
+
+        Parameters
+        ----------
+        data : pd.DataFrame
             DataFrame a guardar.
         path : str
-            Ruta del archivo donde se guardará el DataFrame. Puede ser .csv o .parquet.
-
-        Raises
-        ------
-        ValueError
-            Si el formato del archivo no es soportado.
+            Ruta del archivo CSV donde se guardará el DataFrame.
         """
-        if path.endswith('.parquet'):
-            write_func_pd(data, path) if write_func_pd else write_func_pl(data, path)
-        elif path.endswith('.csv'):
-            write_func_pd(data, path) if write_func_pd else write_func_pl(data, path)
-        else:
-            raise ValueError("Formato de archivo no soportado. Use .csv o .parquet")
+        data.to_csv(path, index=False)
 
     @staticmethod
-    def load_data_pd(file_path: str) -> pd.DataFrame:
-        return Utils._load_data_common(file_path, pd.read_csv, None)
+    def save_csv_pl(data: pl.DataFrame, path: str) -> None:
+        """
+        Guardar un DataFrame en un archivo CSV usando Polars.
+
+        Parameters
+        ----------
+        data : pl.DataFrame
+            DataFrame a guardar.
+        path : str
+            Ruta del archivo CSV donde se guardará el DataFrame.
+        """
+        data.write_csv(path)
 
     @staticmethod
-    def load_data_pl(file_path: str) -> pl.DataFrame:
-        return Utils._load_data_common(file_path, None, pl.read_csv)
+    def save_parquet_pd(data: pd.DataFrame, path: str) -> None:
+        """
+        Guardar un DataFrame en un archivo Parquet usando Pandas.
+
+        Parameters
+        ----------
+        data : pd.DataFrame
+            DataFrame a guardar.
+        path : str
+            Ruta del archivo Parquet donde se guardará el DataFrame.
+        """
+        data.to_parquet(path)
 
     @staticmethod
-    def save_data_pd(data: pd.DataFrame, path: str) -> None:
-        Utils._save_data_common(data, path, lambda df, p: df.to_parquet(p), None)
+    def save_parquet_pl(data: pl.DataFrame, path: str) -> None:
+        """
+        Guardar un DataFrame en un archivo Parquet usando Polars.
 
-    @staticmethod
-    def save_data_pl(data: pl.DataFrame, path: str) -> None:
-        Utils._save_data_common(data, path, None, lambda df, p: df.write_parquet(p))
+        Parameters
+        ----------
+        data : pl.DataFrame
+            DataFrame a guardar.
+        path : str
+            Ruta del archivo Parquet donde se guardará el DataFrame.
+        """
+        data.write_parquet(path)
 
     @staticmethod
     def load_pickle(file_path: str) -> object:
@@ -273,4 +329,24 @@ class Utils:
             for line in lines:
                 print(line)
             raise
+
+    @staticmethod
+    def load_and_save_data(data_paths, save_directory, save_paths):
+        data = [Utils.load_json_pl(path) for path in data_paths]
+        Utils.setup_logging().info('Lectura de datos completada...')
+        
+        for d, save_path in zip(data, save_paths):
+            full_save_path = os.path.join(save_directory, save_path)
+            Utils.save_parquet_pl(d, full_save_path)
+            Utils.setup_logging().info(f'Guardado de datos en {full_save_path} completado...')
+        
+        return data
+
+    @staticmethod
+    def process_and_save_data(data, save_directory, save_paths, process_fn, save_fn, parameters=None):
+        processed_data = [process_fn(d, parameters) for d in data]
+        for d, save_path in zip(processed_data, save_paths):
+            full_save_path = os.path.join(save_directory, save_path)
+            save_fn(d, full_save_path)
+            Utils.setup_logging().info(f'Guardado de datos en {full_save_path} completado...')
 

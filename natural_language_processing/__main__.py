@@ -10,9 +10,13 @@ def main():
         pipeline = sys.argv[1]
         if pipeline == 'All Pipelines':
             PipelineOrchestration.run_pipeline_raw()
+            PipelineOrchestration.run_pipeline_intermediate()
 
         elif pipeline == 'Pipeline Raw':
             PipelineOrchestration.run_pipeline_raw()
+
+        elif pipeline == 'Pipeline Intermediate':
+            PipelineOrchestration.run_pipeline_intermediate()
 
         else:
             print(f"Pipeline '{pipeline}' no reconocido.")
