@@ -1,0 +1,15 @@
+## Data paths parameters
+
+raw_data_train_path_github: https://raw.githubusercontent.com/DenisPeskoff/2020_acl_diplomacy/master/data/train.jsonl
+
+raw_data_test_path_github: https://raw.githubusercontent.com/DenisPeskoff/2020_acl_diplomacy/master/data/test.jsonl
+
+raw_data_validation_path_github: https://raw.githubusercontent.com/DenisPeskoff/2020_acl_diplomacy/master/data/validation.jsonl
+
+raw_data_train_path: data_raw_train.parquet
+
+raw_data_test_path: data_raw_test.parquet
+
+raw_data_validation_path: data_raw_validation.parquet
+
+
