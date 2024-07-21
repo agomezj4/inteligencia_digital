@@ -1,0 +1,15 @@
+## Primary parameters
+
+players_col: players
+
+conversation_id_col: conversation_id
+
+value1: sender_labels
+value2: receiver_labels
+
+messages_col: messages
+
+drop_original: True
+
+
+

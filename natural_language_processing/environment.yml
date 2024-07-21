@@ -12,3 +12,6 @@ dependencies:
   - numpy=1.26.0
   - pyyaml=6.0.0
   - seaborn=0.13.2
+  - polars=0.20.25
+  - transformers=4.42.4
+  - pytorch=2.3.1
