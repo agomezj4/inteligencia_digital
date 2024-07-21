@@ -69,3 +69,38 @@ class PipelineOrchestration:
                                     parameters=parameters['parameters_intermediate'])
 
         logger.info('Fin Pipeline Intermediate')
+
+    # 3. Pipeline Primary
+    @staticmethod
+    def run_pipeline_primary():
+        from .pipelines.primary import PipelinePrimary
+
+        logger.info('Inicio Pipeline Primary')
+        
+        intermediate_data_paths = [
+            os.path.join(data_intermediate_directory, parameters['parameters_catalog']['intermediate_data_train_path']),
+            os.path.join(data_intermediate_directory, parameters['parameters_catalog']['intermediate_data_test_path']),
+            os.path.join(data_intermediate_directory, parameters['parameters_catalog']['intermediate_data_validation_path'])
+        ]
+
+        intermediate_data = [Utils.load_parquet_pl(path) for path in intermediate_data_paths]
+        logger.info('Lectura de datos intermediate completada...')
+
+        recategorize_data = [PipelinePrimary.recategorize_players_pl(d, parameters['parameters_primary']) for d in intermediate_data]
+        binary_data = [PipelinePrimary.binary_encode_pl(d, parameters['parameters_primary']) for d in recategorize_data]
+        primary_data = [PipelinePrimary.tokenize_messages_pl(d, parameters['parameters_primary']) for d in binary_data]
+        
+        primary_save_paths = [
+            parameters['parameters_catalog']['primary_data_train_path'],
+            parameters['parameters_catalog']['primary_data_test_path'],
+            parameters['parameters_catalog']['primary_data_validation_path']
+        ]
+        
+        Utils.process_and_save_data(primary_data, 
+                                    data_primary_directory, 
+                                    primary_save_paths, 
+                                    process_fn=lambda d, p: d, 
+                                    save_fn=Utils.save_parquet_pl,
+                                    parameters=parameters['parameters_primary'])
+
+        logger.info('Fin Pipeline Primary')

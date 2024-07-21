@@ -18,4 +18,10 @@ intermediate_data_validation_path: data_intermediate_validation.parquet
 
 #--
 
+primary_data_train_path: data_primary_train.parquet
+primary_data_test_path: data_primary_test.parquet
+primary_data_validation_path: data_primary_validation.parquet
+
+#--
+
 

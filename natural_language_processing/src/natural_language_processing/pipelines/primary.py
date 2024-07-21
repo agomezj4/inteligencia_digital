@@ -1,5 +1,5 @@
 """
-Lógica del pipeline intermediate
+Lógica del pipeline primary
 """
 
 from typing import Any, Dict, List, Tuple
