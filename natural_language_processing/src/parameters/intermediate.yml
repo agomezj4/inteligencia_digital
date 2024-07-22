@@ -2,7 +2,7 @@
 
 message_col: messages
 
-name_new_col: conversation_id
+conversation_col: conversation_id
 
 colums_to_int:
  - game_score

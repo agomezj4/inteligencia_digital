@@ -1,0 +1,22 @@
+## Feature parameters
+
+data_features:
+ game_id: game_id
+ conversation_col: conversation_id
+ years: years
+ messages_col: messages
+ early_threshold: 1905
+ mid_threshold: 1915
+
+drop_original: True
+
+variance_treshold: 0.75 # Si es mas pequeño, se elimina la columna
+correlation_treshold: 0.75 # Si es mas grande, se elimina la columna
+target_col: 'sender_labels'
+game_col: 'game_id'
+conversation_col: 'conversation_id'
+game_conversation_col: game_conversation_id
+
+tensor_cols:
+ - input_ids
+ - attention_masks

@@ -32,7 +32,7 @@ class PipelinePrimary:
         """
         # Obtención de los nombres de las columnas desde params
         players_col = params['players_col']
-        conversation_id_col = params['conversation_id_col']
+        conversation_id_col = params['conversation_col']
 
         # Función para combinar jugadores por conversation_id
         def combine_players(players):
@@ -174,11 +174,6 @@ class PipelinePrimary:
         ])
 
         logger.info("Columnas tokenizadas agregadas al DataFrame.")
-
-        # Eliminar la columna original si es una buena práctica
-        if params.get('drop_original', False):
-            df = df.drop(messages_col)
-            logger.info(f"Columna original '{messages_col}' eliminada del DataFrame.")
 
         return df
 

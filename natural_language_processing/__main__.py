@@ -12,6 +12,7 @@ def main():
             PipelineOrchestration.run_pipeline_raw()
             PipelineOrchestration.run_pipeline_intermediate()
             PipelineOrchestration.run_pipeline_primary()
+            PipelineOrchestration.run_pipeline_feature()
 
         elif pipeline == 'Pipeline Raw':
             PipelineOrchestration.run_pipeline_raw()
@@ -21,6 +22,9 @@ def main():
 
         elif pipeline == 'Pipeline Primary':
             PipelineOrchestration.run_pipeline_primary()
+
+        elif pipeline == 'Pipeline Feature':
+            PipelineOrchestration.run_pipeline_feature()
 
         else:
             print(f"Pipeline '{pipeline}' no reconocido.")

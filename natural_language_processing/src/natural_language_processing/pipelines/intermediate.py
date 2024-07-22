@@ -37,7 +37,7 @@ class PipelineIntermediate:
 
         # Parámetros
         message_col = params["message_col"]
-        name_new_col = params["name_new_col"]
+        name_new_col = params["conversation_col"]
 
         # Lista para almacenar los nuevos registros
         new_records = []

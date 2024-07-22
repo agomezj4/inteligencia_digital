@@ -9,6 +9,7 @@ parameters_directory = os.path.join(project_root, 'src', 'parameters')
 data_raw_directory = os.path.join(project_root, 'data', '01_raw')
 data_intermediate_directory = os.path.join(project_root, 'data', '02_intermediate')
 data_primary_directory = os.path.join(project_root, 'data', '03_primary')
+data_feature_directory = os.path.join(project_root, 'data', '04_feature')
 
 parameters = Utils.load_parameters(parameters_directory)
 
@@ -104,3 +105,38 @@ class PipelineOrchestration:
                                     parameters=parameters['parameters_primary'])
 
         logger.info('Fin Pipeline Primary')
+
+    # 4. Pipeline Feature
+    @staticmethod
+    def run_pipeline_feature():
+        from .pipelines.feature import PipelineFeature
+
+        logger.info('Inicio Pipeline Feature')
+        
+        primary_data_paths = [
+            os.path.join(data_primary_directory, parameters['parameters_catalog']['primary_data_train_path']),
+            os.path.join(data_primary_directory, parameters['parameters_catalog']['primary_data_test_path']),
+            os.path.join(data_primary_directory, parameters['parameters_catalog']['primary_data_validation_path'])
+        ]
+
+        primary_data = [Utils.load_parquet_pl(path) for path in primary_data_paths]
+        logger.info('Lectura de datos primary completada...')
+
+        new_columns = [PipelineFeature.features_new_pl_pd(d, parameters['parameters_feature']) for d in primary_data]
+        encoding_data = [PipelineFeature.one_hot_encoding_pd(d, parameters['parameters_feature']) for d in new_columns]
+        feature_data = [PipelineFeature.feature_selection_pipeline_pd(d, parameters['parameters_feature']) for d in encoding_data]
+        
+        feature_save_paths = [
+            parameters['parameters_catalog']['feature_data_train_path'],
+            parameters['parameters_catalog']['feature_data_test_path'],
+            parameters['parameters_catalog']['feature_data_validation_path']
+        ]
+        
+        Utils.process_and_save_data(feature_data, 
+                                    data_feature_directory, 
+                                    feature_save_paths, 
+                                    process_fn=lambda d, p: d, 
+                                    save_fn=Utils.save_parquet_pd,
+                                    parameters=parameters['parameters_feature'])
+
+        logger.info('Fin Pipeline Feature')

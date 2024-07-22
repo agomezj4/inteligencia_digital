@@ -1,4 +1,4 @@
-from typing import Tuple, Dict
+from typing import Tuple, Dict, List, Callable, Optional
 
 import os
 import sys
@@ -10,6 +10,8 @@ import json
 import requests
 from io import StringIO
 import polars as pl
+import numpy as np
+from sklearn.base import BaseEstimator, TransformerMixin
 
 
 class Utils:
@@ -331,7 +333,24 @@ class Utils:
             raise
 
     @staticmethod
-    def load_and_save_data(data_paths, save_directory, save_paths):
+    def load_and_save_data(data_paths: List[str], save_directory: str, save_paths: List[str]) -> List[pl.DataFrame]:
+        """
+        Cargar datos desde múltiples rutas de archivos JSON usando Polars y guardarlos en formato Parquet.
+
+        Parameters
+        ----------
+        data_paths : List[str]
+            Lista de rutas de archivos JSON a cargar.
+        save_directory : str
+            Directorio donde se guardarán los archivos Parquet.
+        save_paths : List[str]
+            Lista de nombres de archivos Parquet para guardar los datos cargados.
+
+        Returns
+        -------
+        List[pl.DataFrame]
+            Lista de DataFrames de Polars con los datos cargados.
+        """
         data = [Utils.load_json_pl(path) for path in data_paths]
         Utils.setup_logging().info('Lectura de datos completada...')
         
@@ -343,10 +362,82 @@ class Utils:
         return data
 
     @staticmethod
-    def process_and_save_data(data, save_directory, save_paths, process_fn, save_fn, parameters=None):
+    def process_and_save_data(data: List[pl.DataFrame], save_directory: str, save_paths: List[str], 
+                              process_fn: Callable[[pl.DataFrame, Optional[dict]], pl.DataFrame], 
+                              save_fn: Callable[[pl.DataFrame, str], None], parameters: Optional[dict] = None) -> None:
+        """
+        Procesar y guardar datos usando una función de procesamiento personalizada y una función de guardado.
+
+        Parameters
+        ----------
+        data : List[pl.DataFrame]
+            Lista de DataFrames de Polars a procesar.
+        save_directory : str
+            Directorio donde se guardarán los archivos procesados.
+        save_paths : List[str]
+            Lista de nombres de archivos para guardar los datos procesados.
+        process_fn : Callable[[pl.DataFrame, Optional[dict]], pl.DataFrame]
+            Función de procesamiento que se aplicará a cada DataFrame.
+        save_fn : Callable[[pl.DataFrame, str], None]
+            Función de guardado que se aplicará a cada DataFrame procesado.
+        parameters : Optional[dict], optional
+            Parámetros adicionales para la función de procesamiento, por defecto None.
+
+        Returns
+        -------
+        None
+        """
         processed_data = [process_fn(d, parameters) for d in data]
         for d, save_path in zip(processed_data, save_paths):
             full_save_path = os.path.join(save_directory, save_path)
             save_fn(d, full_save_path)
             Utils.setup_logging().info(f'Guardado de datos en {full_save_path} completado...')
+
+
+class TensorFeatureExtractor(BaseEstimator, TransformerMixin):
+    def __init__(self, tensor_cols: List[str]):
+        self.tensor_cols = tensor_cols
+
+    def fit(self, X: pd.DataFrame, y=None):
+        """
+        Ajuste del transformador. En este caso, no se necesita ajuste, por lo que retorna self.
+
+        Parameters
+        ----------
+        X : pd.DataFrame
+            DataFrame de entrada.
+        y : optional
+            Variable objetivo (no utilizada en este transformador).
+
+        Returns
+        -------
+        self
+            El transformador ajustado.
+        """
+        return self
+
+    def transform(self, X: pd.DataFrame) -> pd.DataFrame:
+        """
+        Transforma las columnas tensoriales en el DataFrame de entrada, expandiéndolas en múltiples columnas.
+
+        Parameters
+        ----------
+        X : pd.DataFrame
+            DataFrame de entrada con las columnas tensoriales a transformar.
+
+        Returns
+        -------
+        pd.DataFrame
+            DataFrame con las columnas tensoriales transformadas en múltiples columnas.
+        """
+        X = X.copy()
+        new_columns = []
+        for col in self.tensor_cols:
+            if col in X:
+                tensor_data = np.array(X[col].tolist())
+                new_columns.append(pd.DataFrame(tensor_data, index=X.index, columns=[f"{col}_{i}" for i in range(tensor_data.shape[1])]))
+                X.drop(columns=[col], inplace=True)
+        if new_columns:
+            X = pd.concat([X] + new_columns, axis=1)
+        return X
 

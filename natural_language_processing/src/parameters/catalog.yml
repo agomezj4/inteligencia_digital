@@ -24,4 +24,9 @@ primary_data_validation_path: data_primary_validation.parquet
 
 #--
 
+feature_data_train_path: data_feature_train.parquet
+feature_data_test_path: data_feature_test.parquet
+feature_data_validation_path: data_feature_validation.parquet
+
+#--
 
