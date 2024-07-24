@@ -10,7 +10,7 @@ from transformers import BertModel, Trainer, TrainingArguments
 import torch.nn as nn
 
 from src.natural_language_processing.utils import Utils, CustomNLPDataset, CustomTrainer
-from torch.utils.data import DataLoader
+from sklearn.metrics import classification_report
 
 logger = Utils.setup_logging()
 
@@ -187,3 +187,62 @@ class PipelineModels:
         logger.info("Entrenamiento del modelo completado.")
 
         return trainer
+    
+    # # 3. Evaluación del modelo
+    # @staticmethod
+    # def evaluate_model_pd(model: nn.Module, df_validation: pd.DataFrame, params: Dict[str, Any]) -> None:
+    #     """
+    #     Evalúa el modelo BERT customizado utilizando el dataset de validación proporcionado.
+
+    #     Parameters
+    #     ----------
+    #     model : nn.Module
+    #         Modelo BERT customizado a evaluar.
+    #     df_validation : pd.DataFrame
+    #         DataFrame de Pandas de validación.
+    #     params: Dict[str, Any]
+    #         Diccionario de parámetros models.
+
+    #     Returns
+    #     -------
+    #     None
+    #     """
+    #     def compute_metrics(p: EvalPrediction) -> Dict:
+    #         """
+    #         Calcula métricas de evaluación.
+
+    #         Parameters
+    #         ----------
+    #         p : EvalPrediction
+    #             Predicciones y etiquetas verdaderas.
+
+    #         Returns
+    #         -------
+    #         dict
+    #             Diccionario con las métricas calculadas.
+    #         """
+    #         preds = np.argmax(p.predictions, axis=1)
+    #         return classification_report(p.label_ids, preds, output_dict=True)
+
+    #     training_args = TrainingArguments(
+    #         per_device_eval_batch_size=params['per_device_eval_batch_size'],
+    #     )
+
+    #     trainer = Trainer(
+    #         model=model,
+    #         args=training_args,
+    #         eval_dataset=df_validation,  # Se usa eval_dataset aquí para evaluación final
+    #         data_collator=lambda data: {
+    #             'input_ids': torch.stack([f['input_ids'] for f in data]),
+    #             'attention_mask': torch.stack([f['attention_mask'] for f in data]),
+    #             'features': torch.stack([f['features'] for f in data]),
+    #             'labels': torch.stack([f['labels'] for f in data])
+    #         },
+    #         compute_metrics=compute_metrics
+    #     )
+
+    #     logger.info("Iniciando la evaluación del modelo...")
+    #     results = trainer.evaluate()
+    #     logger.info(f"Resultados de la evaluación: {results}")
+
+    #     return results

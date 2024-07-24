@@ -1,0 +1,8 @@
+## Data paths parameters
+
+###Load
+certificado_propiedad_data_path: /Users/agomezj/Desktop/Data Science/Proyectos/inteligencia_digital/computer_vision/data/01_load/001-1007202-220301269555588250_pag1.json #Modificar la ruta del archivo json
+#/Users/agomezj/Desktop/Data Science/Proyectos/inteligencia_digital/computer_vision/data/01_load/040-464031-220204640254303951_pag1.json
+
+###Save
+info_certificado_propiedad_data_path: /Users/agomezj/Desktop/Data Science/Proyectos/inteligencia_digital/computer_vision/data/02_save/certificado_propiedad_uno_info.csv #Modificar la ruta del archivo csv
