@@ -1,4 +1,6 @@
 import os
+import pandas as pd
+import torch
 from .utils import Utils
 
 logger = Utils.setup_logging()
@@ -10,6 +12,7 @@ data_raw_directory = os.path.join(project_root, 'data', '01_raw')
 data_intermediate_directory = os.path.join(project_root, 'data', '02_intermediate')
 data_primary_directory = os.path.join(project_root, 'data', '03_primary')
 data_feature_directory = os.path.join(project_root, 'data', '04_feature')
+data_model_input_directory = os.path.join(project_root, 'data', '05_model_input')
 
 parameters = Utils.load_parameters(parameters_directory)
 
@@ -123,8 +126,20 @@ class PipelineOrchestration:
         logger.info('Lectura de datos primary completada...')
 
         new_columns = [PipelineFeature.features_new_pl_pd(d, parameters['parameters_feature']) for d in primary_data]
-        encoding_data = [PipelineFeature.one_hot_encoding_pd(d, parameters['parameters_feature']) for d in new_columns]
-        feature_data = [PipelineFeature.feature_selection_pipeline_pd(d, parameters['parameters_feature']) for d in encoding_data]
+
+        concatenated_data = pd.concat(new_columns, axis=0, ignore_index=True)
+
+        encoding_data = PipelineFeature.one_hot_encoding_pd(concatenated_data, parameters['parameters_feature'])
+        feature_selected_data = PipelineFeature.feature_selection_pipeline_pd(encoding_data, parameters['parameters_feature'])
+
+        train_size = len(primary_data[0])
+        test_size = len(primary_data[1])
+
+        feature_data = [
+            feature_selected_data.iloc[:train_size].reset_index(drop=True),
+            feature_selected_data.iloc[train_size:train_size + test_size].reset_index(drop=True),
+            feature_selected_data.iloc[train_size + test_size:].reset_index(drop=True)
+        ]
         
         feature_save_paths = [
             parameters['parameters_catalog']['feature_data_train_path'],
@@ -140,3 +155,64 @@ class PipelineOrchestration:
                                     parameters=parameters['parameters_feature'])
 
         logger.info('Fin Pipeline Feature')
+
+    # 5. Pipeline Model Input
+    @staticmethod
+    def run_pipeline_model_input():
+        from .pipelines.model_input import PipelineModelInput
+
+        logger.info('Inicio Pipeline Model Input')
+        
+        feature_data_paths = [
+            os.path.join(data_feature_directory, parameters['parameters_catalog']['feature_data_train_path']),
+            os.path.join(data_feature_directory, parameters['parameters_catalog']['feature_data_test_path']),
+            os.path.join(data_feature_directory, parameters['parameters_catalog']['feature_data_validation_path'])
+        ]
+
+        feature_data = [Utils.load_parquet_pd(path) for path in feature_data_paths]
+        logger.info('Lectura de datos feature completada...')
+
+        model_input_data = [PipelineModelInput.min_max_scaler_pd(d) for d in feature_data]
+
+        model_input_save_paths = [
+            parameters['parameters_catalog']['model_input_data_train_path'],
+            parameters['parameters_catalog']['model_input_data_test_path'],
+            parameters['parameters_catalog']['model_input_data_validation_path']
+        ]
+        
+        Utils.process_and_save_data(model_input_data, 
+                                    data_model_input_directory, 
+                                    model_input_save_paths, 
+                                    process_fn=lambda d, p: d, 
+                                    save_fn=Utils.save_parquet_pd,
+                                    parameters=parameters['parameters_model_input'])
+
+        logger.info('Fin Pipeline Model Input')
+
+    # 6. Pipeline Model
+    @staticmethod
+    def run_pipeline_models():
+        from .pipelines.models import PipelineModels
+
+        logger.info('Inicio Pipeline Model')
+        
+        model_input_data_paths = [
+            os.path.join(data_model_input_directory, parameters['parameters_catalog']['model_input_data_train_path']),
+            os.path.join(data_model_input_directory, parameters['parameters_catalog']['model_input_data_test_path']),
+            os.path.join(data_model_input_directory, parameters['parameters_catalog']['model_input_data_validation_path'])
+        ]
+
+        model_input_data = [Utils.load_parquet_pd(path) for path in model_input_data_paths]
+        logger.info('Lectura de datos model input completada...')
+
+        device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
+        model = PipelineModels.create_model_pd(parameters['parameters_models'])
+        model = model.to(device)  # Mueve el modelo al dispositivo
+        data_model = PipelineModels.prepare_datasets_pd(model_input_data[0], model_input_data[1], parameters['parameters_models'], device)
+        training = PipelineModels.train_model_pd(model, data_model[0], data_model[1], parameters['parameters_models'])
+
+        models_save_path = parameters['parameters_catalog']['model_training_data_path']
+
+        Utils.save_pickle(training, models_save_path)
+
+        logger.info('Fin Pipeline Model')

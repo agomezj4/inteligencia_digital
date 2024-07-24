@@ -8,13 +8,19 @@ import logging
 import pandas as pd
 import json
 import requests
+import numpy as np
 from io import StringIO
 import polars as pl
-import numpy as np
-from sklearn.base import BaseEstimator, TransformerMixin
+import torch
+
+from transformers import Trainer
+from torch.utils.data import DataLoader
 
 
 class Utils:
+    """
+    Clase para funciones de utilidad comunes.
+    """
 
     @staticmethod
     def setup_logging() -> logging.Logger:
@@ -394,50 +400,88 @@ class Utils:
             Utils.setup_logging().info(f'Guardado de datos en {full_save_path} completado...')
 
 
-class TensorFeatureExtractor(BaseEstimator, TransformerMixin):
-    def __init__(self, tensor_cols: List[str]):
-        self.tensor_cols = tensor_cols
+class CustomNLPDataset:
+    def __init__(self, feature_values, labels, input_ids, attention_mask, device):
+        self.feature_values = [torch.tensor(fv, dtype=torch.float32).to(device) for fv in feature_values]
+        self.labels = [torch.tensor([label], dtype=torch.long).to(device) for label in labels]
+        self.input_ids = [torch.tensor(ids, dtype=torch.long).to(device) for ids in input_ids]
+        self.attention_mask = [torch.tensor(mask, dtype=torch.long).to(device) for mask in attention_mask]
+        
+        # Verificación inicial
+        self._verify_data()
 
-    def fit(self, X: pd.DataFrame, y=None):
-        """
-        Ajuste del transformador. En este caso, no se necesita ajuste, por lo que retorna self.
+    def _verify_data(self):
+        for i, (fv, label, ids, mask) in enumerate(zip(self.feature_values, self.labels, self.input_ids, self.attention_mask)):
+            if label.numel() == 0:
+                print(f"Advertencia: Etiqueta vacía encontrada en el índice {i}")
+            if fv.numel() == 0 or ids.numel() == 0 or mask.numel() == 0:
+                print(f"Advertencia: Datos vacíos encontrados en el índice {i}")
 
-        Parameters
-        ----------
-        X : pd.DataFrame
-            DataFrame de entrada.
-        y : optional
-            Variable objetivo (no utilizada en este transformador).
+    def __len__(self):
+        return len(self.labels)
 
-        Returns
-        -------
-        self
-            El transformador ajustado.
-        """
-        return self
+    def __getitem__(self, idx):
+        item = {
+            'features': self.feature_values[idx],
+            'labels': self.labels[idx],
+            'input_ids': self.input_ids[idx],
+            'attention_mask': self.attention_mask[idx],
+        }
+        
+        shapes = {key: tensor.shape for key, tensor in item.items()}
+        print(f"Item {idx} shapes: {shapes}")
+        
+        return item
 
-    def transform(self, X: pd.DataFrame) -> pd.DataFrame:
-        """
-        Transforma las columnas tensoriales en el DataFrame de entrada, expandiéndolas en múltiples columnas.
 
-        Parameters
-        ----------
-        X : pd.DataFrame
-            DataFrame de entrada con las columnas tensoriales a transformar.
+class CustomTrainer(Trainer):
+    """
+    Clase para un entrenador personalizado de PyTorch.
+    """
 
-        Returns
-        -------
-        pd.DataFrame
-            DataFrame con las columnas tensoriales transformadas en múltiples columnas.
-        """
-        X = X.copy()
-        new_columns = []
-        for col in self.tensor_cols:
-            if col in X:
-                tensor_data = np.array(X[col].tolist())
-                new_columns.append(pd.DataFrame(tensor_data, index=X.index, columns=[f"{col}_{i}" for i in range(tensor_data.shape[1])]))
-                X.drop(columns=[col], inplace=True)
-        if new_columns:
-            X = pd.concat([X] + new_columns, axis=1)
-        return X
+    # 1. Crear collate_fn personalizado
+    @staticmethod
+    def custom_collate_fn(batch):
+        # Inicializar listas para cada tipo de dato
+        features = []
+        labels = []
+        input_ids = []
+        attention_masks = []
 
+        # Iterar sobre cada item en el batch
+        for item in batch:
+            features.append(item['features'])
+            labels.append(item['labels'])
+            input_ids.append(item['input_ids'])
+            attention_masks.append(item['attention_mask'])
+
+        # Convertir listas a tensores
+        return {
+            'features': torch.stack(features),
+            'labels': torch.stack(labels),
+            'input_ids': torch.stack(input_ids),
+            'attention_mask': torch.stack(attention_masks)
+        }
+
+    # 1. Métodos especiales
+    def get_train_dataloader(self):
+        return DataLoader(
+            self.train_dataset,
+            batch_size=self.args.per_device_train_batch_size,
+            collate_fn=self.custom_collate_fn,
+            shuffle=True
+        )
+
+    # 2. Inicialización
+    def compute_loss(self, model, inputs, return_outputs=False):
+        print("Input shapes:", {k: v.shape for k, v in inputs.items()})
+        
+        outputs = model(input_ids=inputs['input_ids'],
+                        attention_mask=inputs['attention_mask'],
+                        features=inputs['features'])
+        
+        labels = inputs['labels']
+        loss_fct = torch.nn.CrossEntropyLoss()
+        loss = loss_fct(outputs, labels.squeeze(-1))
+        
+        return (loss, outputs) if return_outputs else loss

@@ -30,7 +30,7 @@ class PipelinePrimary:
         polars.DataFrame
             DataFrame con los jugadores recategorizados.
         """
-        # Obtención de los nombres de las columnas desde params
+        # Parámetros
         players_col = params['players_col']
         conversation_id_col = params['conversation_col']
 
@@ -175,6 +175,6 @@ class PipelinePrimary:
 
         logger.info("Columnas tokenizadas agregadas al DataFrame.")
 
-        return df
+        return df, tokenizer
 
 

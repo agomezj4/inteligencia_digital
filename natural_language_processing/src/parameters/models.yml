@@ -1,0 +1,17 @@
+## Models parameters
+
+num_features: 11
+
+num_train_epochs: 1
+per_device_train_batch_size: 8
+per_device_eval_batch_size: 12
+warmup_steps: 50
+weight_decay: 0.01
+
+output_dir: "/Users/agomezj/Desktop/Data Science/Proyectos/inteligencia_digital/natural_language_processing/data/05_models"
+
+target_col: 'sender_labels'
+
+tensor_cols:
+ - input_ids
+ - attention_masks

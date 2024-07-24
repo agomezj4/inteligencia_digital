@@ -60,7 +60,6 @@ class PipelineFeature:
         # Convertir la columna 'years' a tipo numérico
         df[years] = pd.to_numeric(df[years], errors='coerce')
 
-
         # Crear la nueva columna 'game_conversation_id'
         df['game_conversation_id'] = (df[game].astype(str) + df[conversation].astype(str)).astype(int)
 
@@ -231,6 +230,7 @@ class PipelineFeature:
         feature_importance_with_random = model_with_random.feature_importances_
         features_with_random = X.columns.tolist()
 
+        # Compilar resultados en un DataFrame
         feature_importance_df_with_random = pd.DataFrame({"Feature": features_with_random, "Importance": feature_importance_with_random})
         feature_importance_df_with_random = feature_importance_df_with_random.sort_values(by="Importance", ascending=False)
 

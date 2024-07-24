@@ -1,0 +1,8 @@
+## Model Input parameters
+
+balance_target_variable: {
+    'random_state': 42,
+    'sampling_strategy': 0.45 # A mayor numero, mayor balanceo
+}
+
+target_col: 'sender_labels'
