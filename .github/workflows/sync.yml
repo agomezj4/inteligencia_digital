@@ -23,5 +23,5 @@ jobs:
       - name: Sync to GitLab
         run: |
           git remote add gitlab git@gitlab.com:agomezj4/inteligencia_digital.git
-          git fetch --unshallow
+          git fetch --unshallow || true
           git push gitlab ${{ github.ref_name }} --force
