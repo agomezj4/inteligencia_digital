@@ -13,6 +13,7 @@ data_intermediate_directory = os.path.join(project_root, 'data', '02_intermediat
 data_primary_directory = os.path.join(project_root, 'data', '03_primary')
 data_feature_directory = os.path.join(project_root, 'data', '04_feature')
 data_model_input_directory = os.path.join(project_root, 'data', '05_model_input')
+data_models_directory = os.path.join(project_root, 'data', '06_models')
 
 parameters = Utils.load_parameters(parameters_directory)
 
@@ -205,14 +206,31 @@ class PipelineOrchestration:
         model_input_data = [Utils.load_parquet_pd(path) for path in model_input_data_paths]
         logger.info('Lectura de datos model input completada...')
 
-        device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
+        # Preparar datasets
+        device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+        
+        # El siguiente cambio corrige la preparación de los datasets
+        train_dataset, test_dataset, val_dataset = PipelineModels.prepare_datasets_pd(model_input_data[0], model_input_data[1], model_input_data[2], parameters['parameters_models'], device)
+
+        # Crear modelo
         model = PipelineModels.create_model_pd(parameters['parameters_models'])
-        model = model.to(device)  # Mueve el modelo al dispositivo
-        data_model = PipelineModels.prepare_datasets_pd(model_input_data[0], model_input_data[1], parameters['parameters_models'], device)
-        training = PipelineModels.train_model_pd(model, data_model[0], data_model[1], parameters['parameters_models'])
 
-        models_save_path = parameters['parameters_catalog']['model_training_data_path']
+        # Entrenar modelo
+        trainer = PipelineModels.train_model_pd(model, train_dataset, parameters['parameters_models'])
 
-        Utils.save_pickle(training, models_save_path)
+        # Evaluar modelo
+        results_test= PipelineModels.evaluate_model_pd(model, test_dataset, parameters['parameters_models'])
+
+        # Validar resultados
+        results_validation = PipelineModels.evaluate_model_pd(model, val_dataset, parameters['parameters_models'])
+
+
+        models_save_path = os.path.join(data_models_directory, parameters['parameters_catalog']['model_training_data_path'])
+        results_test_save_path = os.path.join(data_models_directory, parameters['parameters_catalog']['results_test_data_path'])
+        results_validation_save_path = os.path.join(data_models_directory, parameters['parameters_catalog']['results_val_data_path'])
+        
+        Utils.save_pickle(trainer, models_save_path)
+        Utils.save_csv_pd(results_test, results_test_save_path)
+        Utils.save_csv_pd(results_validation, results_validation_save_path)
 
         logger.info('Fin Pipeline Model')

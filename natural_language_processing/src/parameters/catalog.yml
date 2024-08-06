@@ -37,4 +37,6 @@ model_input_data_validation_path: data_model_input_validation.parquet
 #--
 
 model_training_data_path: data_model_training.pickle
+results_test_data_path: test_results.csv
+results_val_data_path: val_results.csv
 

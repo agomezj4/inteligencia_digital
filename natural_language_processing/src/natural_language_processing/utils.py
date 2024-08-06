@@ -8,10 +8,12 @@ import logging
 import pandas as pd
 import json
 import requests
-import numpy as np
 from io import StringIO
 import polars as pl
 import torch
+import torch.nn as nn
+
+from torch.utils.data import Dataset
 
 from transformers import Trainer
 from torch.utils.data import DataLoader
@@ -400,12 +402,12 @@ class Utils:
             Utils.setup_logging().info(f'Guardado de datos en {full_save_path} completado...')
 
 
-class CustomNLPDataset:
+class CustomNLPDataset(Dataset):
     def __init__(self, feature_values, labels, input_ids, attention_mask, device):
-        self.feature_values = [torch.tensor(fv, dtype=torch.float32).to(device) for fv in feature_values]
-        self.labels = [torch.tensor([label], dtype=torch.long).to(device) for label in labels]
-        self.input_ids = [torch.tensor(ids, dtype=torch.long).to(device) for ids in input_ids]
-        self.attention_mask = [torch.tensor(mask, dtype=torch.long).to(device) for mask in attention_mask]
+        self.feature_values = torch.tensor(feature_values, dtype=torch.float32).to(device)
+        self.labels = torch.tensor(labels, dtype=torch.long).to(device)
+        self.input_ids = torch.tensor(input_ids, dtype=torch.long).to(device)
+        self.attention_mask = torch.tensor(attention_mask, dtype=torch.long).to(device)
         
         # Verificación inicial
         self._verify_data()
@@ -421,17 +423,12 @@ class CustomNLPDataset:
         return len(self.labels)
 
     def __getitem__(self, idx):
-        item = {
+        return {
             'features': self.feature_values[idx],
             'labels': self.labels[idx],
             'input_ids': self.input_ids[idx],
             'attention_mask': self.attention_mask[idx],
         }
-        
-        shapes = {key: tensor.shape for key, tensor in item.items()}
-        print(f"Item {idx} shapes: {shapes}")
-        
-        return item
 
 
 class CustomTrainer(Trainer):
